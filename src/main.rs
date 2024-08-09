@@ -10,14 +10,14 @@ const BASE_URL: &str = "https://wordsapiv1.p.rapidapi.com/words/";
 fn main() -> Result<(), Error> {
     let args = Args::parse();
     match args.command {
-        Commands::Define { word } => {
-            let d = definitions(word.as_str())?;
-            println!("{}", d);
-        }
-        Commands::Synonyms { word } => {
-            let s = synonyms(word.as_str())?;
-            println!("{}", s);
-        }
+        Commands::Define { word } => match definitions(word.as_str()) {
+            Ok(d) => println!("{}", d),
+            Err(e) => eprintln!("{}", e),
+        },
+        Commands::Synonyms { word } => match synonyms(word.as_str()) {
+            Ok(s) => println!("{}", s),
+            Err(e) => eprintln!("{}", e),
+        },
         Commands::All { word } => {}
         Commands::Setup => {
             setup()?;
@@ -131,8 +131,8 @@ fn get_key_path() -> Result<std::path::PathBuf, Error> {
 
 fn get_key() -> Result<String, Error> {
     let path = get_key_path()?;
-    let config = fs::read_to_string(path)?;
-    let config: Config = toml::from_str(&config)?;
+    let config = fs::read_to_string(path).map_err(|_| Error::ConfigFileNotFoundError)?;
+    let config: Config = toml::from_str(&config).map_err(|_| Error::ConfigFileError)?;
     Ok(config.key)
 }
 
@@ -163,6 +163,10 @@ pub enum Error {
     InputError(#[from] dialoguer::Error),
     #[error("Home directory not found")]
     PathError,
+    #[error("API key not found.\nPlease run 'werd setup'")]
+    ConfigFileNotFoundError,
+    #[error("Could not read API key from config.\nPlease run 'werd setup' again")]
+    ConfigFileError,
 }
 
 #[cfg(test)]
