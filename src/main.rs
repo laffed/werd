@@ -1,11 +1,8 @@
 use clap::{Parser, Subcommand};
 use dialoguer::Password;
-use reqwest::{
-    blocking::{RequestBuilder, Response},
-    header::{HeaderMap, HeaderName, HeaderValue},
-};
+use reqwest::blocking::RequestBuilder;
 use serde::{Deserialize, Serialize};
-use std::{fs, str::FromStr};
+use std::{fmt::Display, fs};
 use thiserror::Error;
 
 const BASE_URL: &str = "https://wordsapiv1.p.rapidapi.com/words/";
@@ -13,10 +10,13 @@ const BASE_URL: &str = "https://wordsapiv1.p.rapidapi.com/words/";
 fn main() -> Result<(), Error> {
     let args = Args::parse();
     match args.command {
-        Commands::Define { word } => {}
+        Commands::Define { word } => {
+            let d = definitions(word.as_str())?;
+            println!("{}", d);
+        }
         Commands::Synonyms { word } => {
             let s = synonyms(word.as_str())?;
-            println!("{:?}", s);
+            println!("{}", s);
         }
         Commands::All { word } => {}
         Commands::Setup => {
@@ -55,12 +55,58 @@ enum Commands {
 #[strum(serialize_all = "lowercase")]
 enum Modus {
     Synonyms,
-    Define,
+    Definitions,
 }
 
-fn synonyms(word: &str) -> Result<String, Error> {
+#[derive(Deserialize)]
+struct SynonymsResponse {
+    word: String,
+    synonyms: Vec<String>,
+}
+
+impl Display for SynonymsResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let synonyms = self
+            .synonyms
+            .iter()
+            .fold(String::new(), |acc, x| acc + x + "\n");
+
+        write!(f, "Synonyms for '{}':\n\n{}", self.word, synonyms)
+    }
+}
+
+fn synonyms(word: &str) -> Result<SynonymsResponse, Error> {
     let client = get_client(word, Modus::Synonyms)?;
-    let res = client.send()?.text()?;
+    let res = client.send()?.json()?;
+    Ok(res)
+}
+
+#[derive(Deserialize)]
+struct DefinitionsResponse {
+    word: String,
+    definitions: Vec<Definition>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Definition {
+    definition: String,
+    part_of_speech: String,
+}
+
+impl Display for DefinitionsResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let definitions = self.definitions.iter().fold(String::new(), |acc, x| {
+            format!("{}({}) {}\n", acc, x.part_of_speech, x.definition)
+        });
+
+        write!(f, "Definitions for '{}':\n\n{}", self.word, definitions)
+    }
+}
+
+fn definitions(word: &str) -> Result<DefinitionsResponse, Error> {
+    let client = get_client(word, Modus::Definitions)?;
+    let res = client.send()?.json()?;
     Ok(res)
 }
 

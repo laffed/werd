@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 dialoguer = "0.11.0"
-reqwest = { version = "0.12.4", features = ["blocking"] }
+reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 serde = { version = "1.0.202", features = ["derive"] }
 toml = "0.8.13"
 dirs = { version = "5.0.1" }
