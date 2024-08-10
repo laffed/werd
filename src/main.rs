@@ -18,9 +18,11 @@ fn main() -> Result<(), Error> {
             Ok(s) => println!("{}", s),
             Err(e) => eprintln!("{}", e),
         },
-        Commands::All { word } => {}
         Commands::Setup => {
             setup()?;
+        }
+        _ => {
+            eprintln!("Command not implemented");
         }
     }
 
